@@ -1,24 +1,14 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-import datetime as dt
-import datetime as dt
 import streamlit as st
 
-st.title("Project work, part 1 - Dashboard basics")
-st.write("Streamlit app.")
+st.set_page_config(
+    page_title="Weather Data Explorer - Dashboard basics",
+    page_icon="🌦️",
+    layout="wide"
+)
 
-df = pd.read_csv("open-meteo-subset.csv", encoding='UTF-8')
-#df.head()
+st.sidebar.title("Navigation")
+st.sidebar.write("Use the sidebar to navigate pages")
 
-df["time"] = pd.to_datetime(df["time"], format="%Y-%m-%dT%H:%M")
-df.head()
-
-
-fig, ax = plt.subplots(figsize=(8,4))
-ax.bar(df['time'].dt.month, df['precipitation (mm)'], color="skyblue", edgecolor="black")
-ax.set_xlabel("Month")
-ax.set_ylabel("Total Precipitation (mm)")
-ax.set_title("Precipitation per Month")
-
-st.pyplot
-
+st.title("Weather Data Explorer - Dashboard basics")
+st.write("Project work, part 1 - Dashboard basics")
+st.write("Navigate using the sidebar to view tables, plots, or more content.")
