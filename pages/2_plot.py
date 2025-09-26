@@ -24,6 +24,7 @@ plt.show()
 
 st.pyplot(fig)
 
+#-------- Precipitation per Month --------
 st.write("2. Precipitation per Month")
 fig1, ax = plt.subplots(figsize=(8,4))
 
@@ -37,3 +38,16 @@ ax.set_ylabel("Total Precipitation (mm)")
 ax.set_title("Precipitation per Month")
 
 st.pyplot(fig1)
+
+#----------- Interactive with plotly ---------------
+st.write("3. Interactive multi-line plot for different weathers variable over time.")
+
+import plotly.express as px
+
+df_long = df.melt(id_vars="time", var_name="variable", value_name="value")
+
+# Interactive multi-line plot
+fig2 = px.line(df_long, x="time", y="value", color="variable", title="Weather Data over Time")
+
+##fig2.show()
+st.plotly_chart(fig2, use_container_width=True)
