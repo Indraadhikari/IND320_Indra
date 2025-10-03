@@ -2,52 +2,50 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import datetime as dt
 import streamlit as st
-import numpy as np
+import plotly.express as px
 
-st.title("Project work, part 1 - Dashboard basics")
+st.title("Interactive line plot for different weathers variable over time.")
 
 df = pd.read_csv("open-meteo-subset.csv", encoding='UTF-8')
 
-st.write("1. Wind Direction in the Compass-Style.")
-fig, ax = plt.subplots(figsize=(8,4))
+df["time"] = pd.to_datetime(df["time"], format="%Y-%m-%dT%H:%M") #converting datetime format
 
-theta = np.radians(df['wind_direction_10m (°)'])
-r = df['wind_speed_10m (m/s)']
+columns = df.columns.tolist()
+columns.remove('time')  # Remove 'time' from selectable options
+select_options = columns + ['All Columns']
+selected_column = st.selectbox("Choose data column to plot:", select_options, 
+                               index=select_options.index('All Columns')
+                               ) # default option 'All Columns'
 
-ax = plt.subplot(111, polar=True)
-ax.scatter(theta, r, s=5, c='b', alpha=0.7)
+months = df['time'].dt.month #st.write(months) #test
+selected_month = st.select_slider(
+    "Select month range:",
+    options=months,
+    value=months[0]  # Default to the first month
+)
 
-ax.set_theta_zero_location("N")   # 0° at North
-ax.set_theta_direction(-1)        # clockwise
-plt.title("Wind Direction (Compass-Style)", va='bottom')
-plt.show()
+#get Month name under slider
+date_object = dt.datetime(2000, selected_month, 1)
+full_month_name = date_object.strftime("%B")
+st.write(full_month_name)
 
-st.pyplot(fig)
+#filtering df as month selected in the slider.
+filtered_df = df[df['time'].dt.month==selected_month]
 
-#-------- Precipitation per Month --------
-st.write("2. Precipitation per Month")
-fig1, ax = plt.subplots(figsize=(8,4))
+# ploting data with all columns if 'all cloumns' options selected
+if selected_column == 'All Columns':
+    df_long = filtered_df.melt(id_vars="time", var_name="variable", value_name="value") #st.write(df_long.tail())
 
-df["time"] = pd.to_datetime(df["time"], format="%Y-%m-%dT%H:%M")
-month = df['time'].dt.month
-prec = df['precipitation (mm)']
+    # Interactive multi-line plot
+    fig2 = px.line(df_long, x="time", y="value", color="variable", title="Weather Data over Time", width=1000,height=500)
 
-ax.bar(month, prec)
-ax.set_xlabel("Month")
-ax.set_ylabel("Total Precipitation (mm)")
-ax.set_title("Precipitation per Month")
+    st.plotly_chart(fig2, use_container_width=True)
+# ploting line charts as a columns selected from dropbox option 
+else:
+    fig = px.line(filtered_df, x='time', y=selected_column, 
+                  title=f"{selected_column.title()} Over Months",
+                  labels={selected_column: selected_column.title(), 'month': 'Month'},
+                  width=1000, height=500)
+    fig.update_layout(yaxis_title=selected_column.title(), xaxis_title="Month")
 
-st.pyplot(fig1)
-
-#----------- Interactive with plotly ---------------
-st.write("3. Interactive multi-line plot for different weathers variable over time.")
-
-import plotly.express as px
-
-df_long = df.melt(id_vars="time", var_name="variable", value_name="value")
-
-# Interactive multi-line plot
-fig2 = px.line(df_long, x="time", y="value", color="variable", title="Weather Data over Time")
-
-##fig2.show()
-st.plotly_chart(fig2, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)
