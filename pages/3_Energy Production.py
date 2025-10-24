@@ -56,21 +56,32 @@ with col1:
 with col2:
     st.header("Select Production Groups and Month for Line Chart")
     
-    all_groups = df["productionGroup"].unique()
-    selected_groups = st.multiselect("Production Groups:", all_groups, default=list(all_groups))
+    # Unique production groups
+    all_groups = sorted(df["productionGroup"].unique())
+
+    # Use st.pills instead of st.multiselect
+    selected_groups = st.pills(
+        "Select Production Groups:",
+        options=all_groups,
+        selection_mode="multi",
+        default=all_groups
+    )
     
+    # Month selection
     month = st.selectbox(
         "Select Month:", 
         list(range(1, 13)), 
         format_func=lambda x: pd.Timestamp(2021, x, 1).strftime("%B")
     )
     
+    # Filter the data
     line_df = df[
         (df["productionGroup"].isin(selected_groups)) &
         (df["startTime"].dt.month == month) &
         (df["priceArea"] == selected_area)
     ]
     
+    # Create line plot
     if not line_df.empty:
         pivot_df = line_df.pivot_table(
             index="startTime",
@@ -80,7 +91,11 @@ with col2:
             fill_value=0
         ).reset_index()
         
-        line_long = pivot_df.melt(id_vars="startTime", var_name="productionGroup", value_name="quantityKwh")
+        line_long = pivot_df.melt(
+            id_vars="startTime", 
+            var_name="productionGroup", 
+            value_name="quantityKwh"
+        )
         
         line_fig = px.line(
             line_long,
@@ -97,7 +112,7 @@ with col2:
 with st.expander("Data Source & Notes"):
     st.write("""
     The data shown here is sourced from the MongoDB collection `production_per_group` in database `indra`. 
-    The original source of the data is Elhub API ('https://api.elhub.no/') - once extract from the API, data is stored in MongoDB.
+    The original source of the data is Elhub API ('https://api.elhub.no/') - once extracted from the API, data is stored in MongoDB.
     It contains hourly energy production by production group (hydro, wind, thermal, solar, and others) and price area. 
     The pie chart shows total production for the selected price area, while the line chart shows time series data for the selected month and production groups.
     """)
