@@ -27,7 +27,7 @@ if len(data) == 0:
 df = pd.DataFrame(data)
 
 # Ensure startTime is datetime
-df["startTime"] = pd.to_datetime(df["startTime"])
+df["startTime"] = pd.to_datetime(df["startTime"], utc=True)
 
 # --- Streamlit layout ---
 col1, col2 = st.columns(2)
