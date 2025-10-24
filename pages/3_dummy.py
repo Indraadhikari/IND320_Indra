@@ -12,6 +12,13 @@ uri = "mongodb+srv://"+USR+":"+PWD+"@cluster0.wmoqhtp.mongodb.net/?retryWrites=t
 # Connect to MongoDB
 client = MongoClient(uri)
 
+
+# Selecting a database and a collection.
+database = client['example']
+collection = database['data']
+
+db = client["indra"]
+
 st.success("Successfully connected to MongoDB Atlas!")
 
 # Example: Read data from a collection
