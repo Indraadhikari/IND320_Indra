@@ -26,8 +26,11 @@ if len(data) == 0:
 # Convert to DataFrame
 df = pd.DataFrame(data)
 
-# Ensure startTime is datetime
+# making startTime datetime
 df["startTime"] = pd.to_datetime(df["startTime"], utc=True)
+
+# making quantityKwh column numberic
+df["quantityKwh"] = pd.to_numeric(df["quantityKwh"], errors="coerce")
 
 # --- Streamlit layout ---
 col1, col2 = st.columns(2)
