@@ -13,7 +13,7 @@ uri = f"mongodb+srv://{USR}:{PWD}@cluster0.wmoqhtp.mongodb.net/?retryWrites=true
 client = MongoClient(uri)
 db = client["indra"]
 
-st.success("✅ Successfully connected to MongoDB Atlas!")
+#st.success("✅ Successfully connected to MongoDB Atlas!")
 
 # --- Load data from collection ---
 data_cursor = db["production_per_group"].find()
@@ -39,7 +39,7 @@ col1, col2 = st.columns(2)
 with col1:
     st.header("Select Price Area for Pie Chart")
     
-    price_areas = df["priceArea"].unique()
+    price_areas = sorted(df["priceArea"].unique())
     selected_area = st.radio("Price Area:", price_areas)
     
     pie_df = df[df["priceArea"] == selected_area].groupby("productionGroup")["quantityKwh"].sum().reset_index()
@@ -97,6 +97,7 @@ with col2:
 with st.expander("Data Source & Notes"):
     st.write("""
     The data shown here is sourced from the MongoDB collection `production_per_group` in database `indra`. 
-    It contains hourly energy production by production group (hydro, wind, thermal, etc.) and price area. 
+    The original source of the data is Elhub API ('https://api.elhub.no/') - once extract from the API, data is stored in MongoDB.
+    It contains hourly energy production by production group (hydro, wind, thermal, solar, and others) and price area. 
     The pie chart shows total production for the selected price area, while the line chart shows time series data for the selected month and production groups.
     """)

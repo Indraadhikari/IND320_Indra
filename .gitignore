@@ -9,3 +9,5 @@ No_sync/
 
 # Ignore pycache
 __pycache__
+# Ignore streamlit secretes
+.streamlit/secrets.toml
