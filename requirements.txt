@@ -5,3 +5,4 @@ streamlit
 datetime
 plotly
 pymongo
+statsmodels
