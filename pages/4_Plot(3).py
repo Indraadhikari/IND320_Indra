@@ -1,23 +1,31 @@
 import pandas as pd
-import matplotlib.pyplot as plt
 import datetime as dt
 import streamlit as st
 import plotly.express as px
 
 st.title("Interactive line plot for different weathers variable over time.")
 
-df = pd.read_csv("open-meteo-subset.csv", encoding='UTF-8')
+city = st.session_state.get("city", "Oslo")
 
-df["time"] = pd.to_datetime(df["time"], format="%Y-%m-%dT%H:%M") #converting datetime format
+df_2021 = st.session_state.get("df_2021")
 
-columns = df.columns.tolist()
+# df_2021 = pd.read_csv("open-meteo-subset.csv", encoding='UTF-8')
+if df_2021 is None:
+    st.warning("Please go back to page 'Table' and load data first.")
+    st.stop()
+
+st.caption(f"Info: These dataset cover open-meteo weathers data for {city} for year 2021.")
+
+df_2021["time"] = pd.to_datetime(df_2021["time"], format="%Y-%m-%dT%H:%M")  # converting datetime format
+
+columns = df_2021.columns.tolist()
 columns.remove('time')  # Remove 'time' from selectable options
 select_options = columns + ['All Columns']
 selected_column = st.selectbox("Choose data column to plot:", select_options, 
                                index=select_options.index('All Columns')
                                ) # default option 'All Columns'
 
-months = df['time'].dt.month #st.write(months) #test
+months = df_2021['time'].dt.month #st.write(months) #test
 selected_month = st.select_slider(
     "Select month range:",
     options=months,
@@ -30,7 +38,7 @@ full_month_name = date_object.strftime("%B")
 st.write(full_month_name)
 
 #filtering df as month selected in the slider.
-filtered_df = df[df['time'].dt.month==selected_month]
+filtered_df = df_2021[df_2021['time'].dt.month==selected_month]
 
 # ploting data with all columns if 'all cloumns' options selected
 if selected_column == 'All Columns':

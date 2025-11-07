@@ -1,8 +1,10 @@
-pandas
-matplotlib
-numpy
 streamlit
-datetime
+pandas
 plotly
 pymongo
+requests
+numpy
+matplotlib
+scipy
 statsmodels
+scikit-learn

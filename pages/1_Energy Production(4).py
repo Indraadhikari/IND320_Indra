@@ -9,22 +9,36 @@ st.title("Energy Production Dashboard (MongoDB)")
 USR = st.secrets["mongo"]["username"]
 PWD = st.secrets["mongo"]["password"]
 
+#  c_file = '/Users/indra/Documents/Masters in Data Science/Data to Decision/IND320_Indra/No_sync/MongoDB.txt' #creadential file
+#  USR, PWD = open(c_file).read().splitlines()
+
 uri = f"mongodb+srv://{USR}:{PWD}@cluster0.wmoqhtp.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-client = MongoClient(uri)
+
+
+@st.cache_resource
+def get_client():
+    return MongoClient(uri)
+
+
+client = get_client()
 db = client["indra"]
 
-#st.success("✅ Successfully connected to MongoDB Atlas!")
 
-# --- Load data from collection ---
-data_cursor = db["production_per_group"].find()
-data = list(data_cursor)
+@st.cache_data(show_spinner=True)
+def load_data():
+    data_cursor = db["production_per_group"].find()
+    data = list(data_cursor)
+    df = pd.DataFrame(data)
+    df["startTime"] = pd.to_datetime(df["startTime"], utc=True)
+    df["quantityKwh"] = pd.to_numeric(df["quantityKwh"], errors="coerce")
+    return df
 
-if len(data) == 0:
+
+df = load_data()
+
+if len(df) == 0:
     st.warning("No data found in MongoDB collection!")
     st.stop()
-
-# Convert to DataFrame
-df = pd.DataFrame(data)
 
 # making startTime datetime
 df["startTime"] = pd.to_datetime(df["startTime"], utc=True)
@@ -116,3 +130,8 @@ with st.expander("Data Source & Notes"):
     It contains hourly energy production by production group (hydro, wind, thermal, solar, and others) and price area. 
     The pie chart shows total production for the selected price area, while the line chart shows time series data for the selected month and production groups.
     """)
+
+# Store in session state for other pages
+st.session_state["selected_area"] = selected_area
+st.session_state["selected_year"] = 2021  # fixed year
+st.session_state["df"] = df

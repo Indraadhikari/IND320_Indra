@@ -10,7 +10,20 @@ st.sidebar.title("Navigation")
 st.sidebar.write("Use the sidebar to navigate pages")
 
 st.title("IND320 Project Work")
-st.write("Project work, part 1 - Dashboard basics")
-st.write("Project work, part 2 - Data Sources")
-st.write("Project work, part 3 - Data Quality")
-st.write("Navigate using the sidebar to view tables, plots, or more content.")
+st.write("""
+         * Project work, part 1 - Dashboard basics
+            * Page 1 --> app (Current page)
+            * Page 4 --> Table 
+            * Page 5 --> Plot
+            * Page 2 --> Dummy page (Now changed to Energy Production for part 2)
+        """)
+st.write("""
+         * Project work, part 2 - Data Sources
+            * Page 2 --> Energy Production
+         """)
+st.write("""
+         * Project work, part 3 - Data Quality
+            * Page 3 --> STL and Spectrogram
+            * Page 5 --> Outliers and Anomolies
+         """)
+st.caption("**Navigate using the sidebar to view tables, plots, or more content.**")
