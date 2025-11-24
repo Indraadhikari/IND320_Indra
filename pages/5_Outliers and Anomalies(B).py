@@ -60,21 +60,28 @@ def analyze_temperature_outliers(
     outliers_df = data.loc[outlier_mask].copy()
     outliers_df.loc[:, 'SATV'] = satv[outlier_mask]
 
+        #  Compute trend estimate (approximate low‑frequency component)
+    temp_trend = temps - satv
+
+    #  Convert SPC limits from SATV back to temperature space
+    upper_curve = temp_trend + upper
+    lower_curve = temp_trend + lower
+
     #  Plot 
     # fig = None
     # if plot:
+
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(data[time_col], temps, label='Temperature', color='orange', lw=1)
-    ax.scatter(data.loc[outlier_mask, time_col], 
-               temps[outlier_mask], color='red', s=20, label='Outliers')
 
-    # reference lines
-    temp_median = np.median(temps)
-    ax.axhline(temp_median, color='gray', linestyle='--', label='Median Temperature')
-    ax.axhline(temp_median + upper, color='orange', linestyle='--', label='Upper SPC limit')
-    ax.axhline(temp_median + lower, color='orange', linestyle='--', label='Lower SPC limit')
+    #  Plot raw temperatures
+    ax.plot(data[time_col], temps, color='orange', lw=1, label='Temperature')
+    ax.plot(data[time_col], upper_curve, color='grey', linestyle='--', lw=1, label='Upper SPC limit')
+    ax.plot(data[time_col], lower_curve, color='grey', linestyle='--', lw=1, label='Lower SPC limit')
 
-    ax.set_title("Temperature Outliers via DCT High-pass Filtering & Robust SPC")
+    #  Mark outliers on the raw temperature curve
+    ax.scatter(data.loc[outlier_mask, time_col], temps[outlier_mask], color='red', s=20, zorder=3, label='Outliers')
+
+    ax.set_title("Temperature Outliers via DCT High‑pass Filtering & Robust SPC")
     ax.set_xlabel("Time")
     ax.set_ylabel("Temperature (°C)")
     ax.legend()
