@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from Home import load_data
+from app import load_data
 
 st.title("Energy Production Dashboard (MongoDB)")
 

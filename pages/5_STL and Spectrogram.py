@@ -19,7 +19,7 @@ if area:
 if area is None or len(production_df) == 0:
     st.warning("No price area selected. Please select one from the Map page.")
     if st.button("🗺️ Go to Map Page", type="primary"):
-        st.switch_page("pages/6_Map_And_Selector.py")
+        st.switch_page("pages/1_Map_And_Selector.py")
     st.stop()
 
 st.caption("Info: The analysing datase is the energy production by production data.")
