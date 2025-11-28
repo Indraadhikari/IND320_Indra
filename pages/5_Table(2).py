@@ -4,11 +4,17 @@ import requests
 
 st.title('Tabular data from the open-meteo API.')
 
-area = st.session_state.get("selected_area")
+area = st.session_state.get('selected_area', None)
+production_df = st.session_state.get("df", [])
 
-if area is None:
-    st.warning("Please go back to page 'Energy Production' and select a price area first.")
+if area:
+    st.write(f"Working with Price Area: {area}")
+    # Use it for filtering, analysis, etc.
+if area is None or len(production_df) == 0:
+    st.warning("No price area selected. Please select one from the Map page.")
     st.stop()
+
+area = area.replace(" ", "")
 
 data = {
     "priceArea": ["NO1", "NO2", "NO3", "NO4", "NO5"],

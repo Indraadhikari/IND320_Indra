@@ -8,3 +8,5 @@ matplotlib
 scipy
 statsmodels
 scikit-learn
+geopandas
+streamlit_plotly_events
