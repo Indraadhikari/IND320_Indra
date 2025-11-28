@@ -188,14 +188,13 @@ def fetch_weather_data(lat, lon, start_year, end_year):
 
 # ========== MAIN APP ==========
 
+
 # Check for selected coordinates
 if not st.session_state.get('selected_coords'):
-    st.warning("No coordinates selected!")
-    st.info("Please go to the Map page and select a location by clicking on a price area.")
-    
+    st.warning("Please go to the Map page and select a location by clicking on a price area.")
+  
     if st.button("🗺️ Go to Map Page", type="primary"):
-        st.switch_page("pages/6_Map_And_Selector.py")
-    
+        st.switch_page("pages/1_Map_And_Selector.py") 
     st.stop()
 
 # selected location

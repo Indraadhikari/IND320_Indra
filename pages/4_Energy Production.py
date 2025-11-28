@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-#from Home import load_data
+from Home import load_data
 
 st.title("Energy Production Dashboard (MongoDB)")
 
@@ -12,7 +12,7 @@ def get_df():
 
     if len(df) == 0:
         with st.spinner("Fetching data..."):
-            #df = load_data()
+            df = load_data()
             #-------- Start: For Local test to prevent many request to MongoDB in testing ---------
             df = pd.read_csv("No_sync/P_Energy.csv")
             df["startTime"] = pd.to_datetime(df["startTime"], utc=True)
