@@ -56,12 +56,11 @@ def show_sidebar():
 # -----------------------------
 # MongoDB URI Helper
 # -----------------------------
-def get_credential():
+def get_credential(host):
     # Streamlit Cloud (formerly "share.streamlit.io") sets this environment variable.
     # It also relies on 'st.secrets' being available, which only happens in deployment.
-    if "MONGO" in st.secrets:
+    if host == "github": 
         # --- Streamlit Cloud deployment ---
-        st.info("Connecting using Streamlit Secrets (Cloud Environment).")
         USR = st.secrets["mongo"]["username"]
         PWD = st.secrets["mongo"]["password"]
         
@@ -86,7 +85,8 @@ def get_credential():
 def get_mongo_uri():
     # --- Connect to MongoDB ---
     #host = "local"
-    USR, PWD = get_credential()
+    host = "github"
+    USR, PWD = get_credential(host)
     uri = f"mongodb+srv://{USR}:{PWD}@cluster0.wmoqhtp.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     return uri
 
