@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import utils as ut
+import datetime as dt
 
 ut.apply_styles()
 ut.show_sidebar()
@@ -10,15 +11,33 @@ st.set_page_config(page_title="Meteorology ↔ Energy Correlation", page_icon='�
 st.title("Meteorology and Energy Production  - Sliding Window Correlation")
 
 # Load data from session_state
-meteo_df = st.session_state.get("df_2021", pd.DataFrame())
+#meteo_df = st.session_state.get("df_2021", pd.DataFrame())
 energy_df = st.session_state.get("df", pd.DataFrame())
+selected_coords = st.session_state.get("selected_coords", None)
 
-if meteo_df.empty or energy_df.empty:
+
+if energy_df.empty or selected_coords is None:
     st.warning("Please go to the Map page and select a location by clicking on a price area.")
   
     if st.button("🗺️ Go to Map Page", type="primary"):
         st.switch_page("pages/1_Map_And_Selector.py") 
     st.stop()
+
+# extracting meteo data
+lat, lon = selected_coords
+
+start_date = pd.to_datetime(energy_df["startTime"].min(), utc=True).date()
+end_date = pd.to_datetime(energy_df["startTime"].max(), utc=True).date()
+
+st.info(f"The available production data ranges from **{start_date.strftime('%Y-%m-%d')}** to **{end_date.strftime('%Y-%m-%d')}**.")
+
+with st.spinner("Fetching data..."):
+    meteo_df = []
+    meteo_df = ut.get_weather_data(lat, lon, start_date, end_date)
+
+if len(meteo_df) == 0:
+    st.warning("Error while fetching mateo data!!")
+
 
 # Helper: sliding‑window correlation
 def sliding_window_corr(x: pd.Series, y: pd.Series, window: int = 24, lag: int = 0) -> pd.Series:

@@ -1,9 +1,9 @@
 import streamlit as st
-import matplotlib.pyplot as plt
 import pandas as pd
-from sklearn.neighbors import LocalOutlierFactor
 import numpy as np
+from sklearn.neighbors import LocalOutlierFactor
 from scipy.fftpack import dct, idct
+import plotly.graph_objects as go
 import utils as ut 
 
 ut.apply_styles()
@@ -11,15 +11,25 @@ ut.show_sidebar()
 
 st.title("Outlier/SPC and Anomaly/LOF analysis")
 
-df_2021 = st.session_state.get("df_2021", None)
-
 selected_area = st.session_state.get('selected_area', None)
+selected_coords = st.session_state.get("selected_coords", None)
 
-if selected_area is None or df_2021 is None:
+if selected_area is None or selected_coords is None:
     st.warning("No price area selected. Please select one from the Map page.")
     if st.button("🗺️ Go to Map Page", type="primary"):
         st.switch_page("pages/1_Map_And_Selector.py")
     st.stop()
+
+lat, lon = selected_coords
+
+year = st.selectbox(
+    "Select Year",
+    options=range(1940, 2025),
+    index=2021 - 1940
+)
+
+with st.spinner("Fetching data..."):
+    df_2021 = ut.get_weather_data(lat, lon, f"{year}-01-01", f"{year}-01-31")
 
 area_mapping = {
     "NO1": {"city": "Oslo"},
@@ -30,84 +40,90 @@ area_mapping = {
 }
 
 area_key = selected_area.replace(" ", "")
-if area_key in area_mapping:
-    city = area_mapping[area_key]["city"]
-else:
-    city = "Unknown"
+city = area_mapping.get(area_key, {}).get("city", "Unknown")
 
-st.caption(f"Info: These dataset cover open-meteo weathers data for {city} for year 2021.")
-
-# Fuction for SPC Outlier Analysis (Temperature)
+st.caption(f"Info: These dataset cover open-meteo weathers data for {city} for year {year}.")
 
 
+# =====================================================
+#        REPLACEMENT 1 — SPC Plot Using Plotly
+# =====================================================
 def analyze_temperature_outliers(
     df_2021,
     time_col='time',
     temp_col='temperature_2m (°C)',
-    freq_cutoff=10,  # Number of low-frequency DCT components to remove (default=10).
-    k=3  # Number of robust standard deviations (MAD scaled) for SPC limits (default=3)
-    # plot=True # plot by default, not an optional but it is nice to have optional with default value.
+    freq_cutoff=10,
+    k=3
 ):
-    """
-    Returns
-    outliers_df : DataFrame of outlier rows (with SATV column)
-    stats : dict of summary statistics
-    fig : matplotlib figure
-    """
-
-    #  Prepare data 
-    data = df_2021.copy()  # This will speed up the plot process as it copy all data once and work with it
+    data = df_2021.copy()
     data[time_col] = pd.to_datetime(data[time_col])
     data = data.sort_values(time_col).reset_index(drop=True)
 
     temps = data[temp_col].astype(float).values
 
-    #  DCT high-pass filter 
+    # ---- DCT high-pass filter ----
     coeff = dct(temps, norm='ortho')
     highpass = np.copy(coeff)
-    highpass[:freq_cutoff] = 0.0  # remove low-frequency (seasonal) components
-    satv = idct(highpass, norm='ortho')  # Seasonally Adjusted Temperature Variations
+    highpass[:freq_cutoff] = 0.0
+    satv = idct(highpass, norm='ortho')
 
-    #  Robust SPC limits 
     median_satv = np.median(satv)
     mad_satv = np.median(np.abs(satv - median_satv))
-    robust_sigma = 1.4826 * mad_satv  # (robust_sigma = 1.4826; For a formal data- lecture)
+    robust_sigma = 1.4826 * mad_satv
     upper = median_satv + k * robust_sigma
     lower = median_satv - k * robust_sigma
 
-    #  Identify outliers 
     outlier_mask = (satv > upper) | (satv < lower)
     outliers_df = data.loc[outlier_mask].copy()
-    outliers_df.loc[:, 'SATV'] = satv[outlier_mask]
+    outliers_df['SATV'] = satv[outlier_mask]
 
-        #  Compute trend estimate (approximate low‑frequency component)
+    # ---- Convert to temperature space ----
     temp_trend = temps - satv
-
-    #  Convert SPC limits from SATV back to temperature space
     upper_curve = temp_trend + upper
     lower_curve = temp_trend + lower
 
-    #  Plot 
-    # fig = None
-    # if plot:
+    # =====================================================
+    #              PLOTLY VERSION OF THE FIGURE
+    # =====================================================
+    fig = go.Figure()
 
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig.add_trace(go.Scatter(
+        x=data[time_col], y=temps,
+        mode="lines",
+        name="Temperature",
+        line=dict(color="orange")
+    ))
 
-    #  Plot raw temperatures
-    ax.plot(data[time_col], temps, color='orange', lw=1, label='Temperature')
-    ax.plot(data[time_col], upper_curve, color='grey', linestyle='--', lw=1, label='Upper SPC limit')
-    ax.plot(data[time_col], lower_curve, color='grey', linestyle='--', lw=1, label='Lower SPC limit')
+    fig.add_trace(go.Scatter(
+        x=data[time_col], y=upper_curve,
+        mode="lines",
+        name="Upper SPC Limit",
+        line=dict(color="gray", dash="dash")
+    ))
 
-    #  Mark outliers on the raw temperature curve
-    ax.scatter(data.loc[outlier_mask, time_col], temps[outlier_mask], color='red', s=20, zorder=3, label='Outliers')
+    fig.add_trace(go.Scatter(
+        x=data[time_col], y=lower_curve,
+        mode="lines",
+        name="Lower SPC Limit",
+        line=dict(color="gray", dash="dash")
+    ))
 
-    ax.set_title("Temperature Outliers via DCT High‑pass Filtering & Robust SPC")
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Temperature (°C)")
-    ax.legend()
-    plt.tight_layout()
+    fig.add_trace(go.Scatter(
+        x=data.loc[outlier_mask, time_col],
+        y=temps[outlier_mask],
+        mode="markers",
+        name="Outliers",
+        marker=dict(color="red", size=8)
+    ))
 
-    #  Summary 
+    fig.update_layout(
+        title="Temperature Outliers via DCT High-pass Filtering & Robust SPC",
+        xaxis_title="Time",
+        yaxis_title="Temperature (°C)",
+        template="plotly_white",
+        height=500
+    )
+
     stats = {
         'n_points': len(data),
         'n_outliers': int(outlier_mask.sum()),
@@ -119,82 +135,88 @@ def analyze_temperature_outliers(
         'lower_limit_SATV': float(lower)
     }
 
-    # if plot:
     return outliers_df, stats, fig
 
 
-# Function for ocal Outlier Factor (Precipitation)
-
+# =====================================================
+#       REPLACEMENT 2 — LOF Plot Using Plotly
+# =====================================================
 def analyze_precipitation_anomalies(
     df_2021,
-    time_col='time',  # Column name for timestamps
-    precip_col='precipitation (mm)',  # Column name for precipitation values
-    proportion=0.01  # Expected proportion of anomalies (0-1); 1%
+    time_col="time",
+    precip_col="precipitation (mm)",
+    proportion=0.01
 ):
-    """
-    Returns
-    outlier_df : DataFrame containing only the detected anomalies
-    stats : Summary statistics about anomalies
-    fig : matplotlib.figure.Figure
-    """
-    
     df = df_2021.copy()
     df[time_col] = pd.to_datetime(df[time_col])
     df = df.sort_values(time_col).reset_index(drop=True)
-    
+
     precip = df[precip_col].fillna(0).values.reshape(-1, 1)
 
-    #  Apply LOF (Local Outlier Factor) 
     lof = LocalOutlierFactor(contamination=proportion)
     labels = lof.fit_predict(precip)
-    mask = labels == -1  # -1 means anomaly (outlier)
-    
-    # Extract anomalies
+    mask = labels == -1
+
     outlier_df = df[mask].copy()
-    outlier_df['LOF_Score'] = lof.negative_outlier_factor_[mask]
+    outlier_df["LOF_Score"] = lof.negative_outlier_factor_[mask]
 
-    #  Plot 
-    fig, ax = plt.subplots(figsize=(12, 5))
-    ax.plot(df[time_col], df[precip_col], label='Precipitation', color='blue')
-    ax.scatter(df.loc[mask, time_col], df.loc[mask, precip_col],
-               color='red', label='Anomalies (LOF)', zorder=3)
-    ax.set_title("Precipitation Anomalies via Local Outlier Factor")
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Precipitation (mm)")
-    ax.legend()
-    plt.tight_layout()
+    # =====================================================
+    #               PLOTLY VERSION OF THE FIGURE
+    # =====================================================
+    fig = go.Figure()
 
-    #  Summary Statistics 
+    fig.add_trace(go.Scatter(
+        x=df[time_col], y=df[precip_col],
+        mode="lines",
+        name="Precipitation",
+        line=dict(color="blue")
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=df.loc[mask, time_col],
+        y=df.loc[mask, precip_col],
+        mode="markers",
+        name="Anomalies (LOF)",
+        marker=dict(color="red", size=8)
+    ))
+
+    fig.update_layout(
+        title="Precipitation Anomalies via Local Outlier Factor",
+        xaxis_title="Time",
+        yaxis_title="Precipitation (mm)",
+        template="plotly_white",
+        height=500
+    )
+
     stats = {
-        'n_points': len(df),
-        'n_anomalies': len(outlier_df),
-        'proportion_anomalies': round(len(outlier_df) / len(df), 4),
-        'mean_precipitation': df[precip_col].mean(),
-        'mean_anomalies': outlier_df[precip_col].mean() if len(outlier_df) > 0 else None
+        "n_points": len(df),
+        "n_anomalies": len(outlier_df),
+        "proportion_anomalies": round(len(outlier_df) / len(df), 4),
+        "mean_precipitation": df[precip_col].mean(),
+        "mean_anomalies": outlier_df[precip_col].mean() if len(outlier_df) > 0 else None,
     }
 
-    #  Return Results 
     return outlier_df, stats, fig
 
 
-# Tabs
+# =====================================================
+#                 TABS + DISPLAY
+# =====================================================
 tab1, tab2 = st.tabs(["Temperature Outliers (SPC)", "Precipitation Anomalies (LOF)"])
 
 with tab1:
     st.subheader("SPC Outlier Analysis (Temperature)")
     cutoff = st.slider("DCT frequency cutoff", 5, 50, 10)
     k = st.slider("MAD multiplier (k)", 1, 5, 3)
+
     outliers, stats, fig = analyze_temperature_outliers(df_2021, freq_cutoff=cutoff, k=k)
-    st.pyplot(fig)
-    st.write("Summary:")
-    st.write(stats)
-    # st.dataframe(outliers.head())
+    st.plotly_chart(fig, use_container_width=True)
+    st.write("Summary:", stats)
 
 with tab2:
     st.subheader("Local Outlier Factor (Precipitation)")
     prop = st.slider("Proportion of anomalies", 0.001, 0.05, 0.01)
+
     anomalies, stats, fig = analyze_precipitation_anomalies(df_2021, proportion=prop)
-    st.pyplot(fig)
-    st.write("Summary:")
-    st.write(stats)
-    # st.dataframe(anomalies.head())
+    st.plotly_chart(fig, use_container_width=True)
+    st.write("Summary:", stats)
