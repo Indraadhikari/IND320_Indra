@@ -56,22 +56,37 @@ def show_sidebar():
 # -----------------------------
 # MongoDB URI Helper
 # -----------------------------
-def get_creadential(host):
-    if host == "github":
-        # --- Connect to MongoDB ---
+def get_credential():
+    # Streamlit Cloud (formerly "share.streamlit.io") sets this environment variable.
+    # It also relies on 'st.secrets' being available, which only happens in deployment.
+    if "MONGO" in st.secrets:
+        # --- Streamlit Cloud deployment ---
+        st.info("Connecting using Streamlit Secrets (Cloud Environment).")
         USR = st.secrets["mongo"]["username"]
         PWD = st.secrets["mongo"]["password"]
+        
     else:
+        # --- Local development (secrets not available) ---
+        st.info("Connecting using local file (Local Environment).")
         c_file = 'No_sync/MongoDB.txt'
-        USR, PWD = open(c_file).read().splitlines()
+        try:
+            # Note: This assumes the local file is present and formatted correctly
+            with open(c_file, 'r') as f:
+                USR, PWD = f.read().splitlines()
+        except FileNotFoundError:
+            st.error(f"Local credential file not found at: {c_file}")
+            st.stop()
+        except Exception as e:
+            st.error(f"Error reading local credentials: {e}")
+            st.stop()
+            
     return USR, PWD
 
 @st.cache_resource
 def get_mongo_uri():
     # --- Connect to MongoDB ---
-    host = "github"
     #host = "local"
-    USR, PWD = get_creadential(host)
+    USR, PWD = get_credential()
     uri = f"mongodb+srv://{USR}:{PWD}@cluster0.wmoqhtp.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     return uri
 
@@ -110,14 +125,14 @@ def load_data_from_csv(file_path="No_sync/P_Energy.csv"):
     return df
 
 @st.cache_data(show_spinner=False)
-def get_weather_data(lat, lon, year):
+def get_weather_data(lat, lon, start_date, end_date):
     try:
         url = "https://archive-api.open-meteo.com/v1/archive"
         params = {
             "latitude": lat,
             "longitude": lon,
-            "start_date": f"{year}-01-01",
-            "end_date": f"{year}-12-31",
+            "start_date": start_date,
+            "end_date": end_date,
             "hourly": [
                 "temperature_2m",
                 "precipitation",

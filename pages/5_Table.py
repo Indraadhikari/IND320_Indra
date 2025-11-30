@@ -1,6 +1,5 @@
 import pandas as pd
 import streamlit as st
-import requests
 import utils as ut 
 
 ut.apply_styles()
@@ -38,9 +37,17 @@ if area_key in area_mapping:
 else:
     city = "Unknown"
 
-st.caption(f"Info: These dataset cover open-meteo weather data for {city} for year 2021.")
+year = st.selectbox(
+    "Select Year",
+    options=range(1940, 2025), # Range from 1940 up to (but not including) 2025
+    index=2021 - 1940 # Sets 2021 as the default index
+)
 
-df_2021 = ut.get_weather_data(lat, lon, 2021)
+st.caption(f"Info: These dataset cover open-meteo weathers data for {city} for year {year}.")
+
+with st.spinner("Fetching data..."):
+    df_2021 = ut.get_weather_data(lat, lon, f"{year}-01-01", f"{year}-01-31")
+
 st.write("1. Overview of the dataset.")
 st.write(df_2021)
 

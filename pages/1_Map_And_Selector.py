@@ -251,9 +251,3 @@ with col3:
 
 #For weathers data
 selected_coords = st.session_state.get("selected_coords", None) 
-
-if selected_coords is None:
-    st.stop()
-else:
-    lat, lon = selected_coords
-    st.session_state["df_2021"] = ut.get_weather_data(lat, lon, 2021)

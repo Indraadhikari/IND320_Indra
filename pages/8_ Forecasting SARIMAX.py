@@ -23,14 +23,16 @@ st.title("Forecasting of Energy Production and Consumption")
 # Load Data
 # --------------------------------------------------------------------
 energy_df = st.session_state.get("df", pd.DataFrame())
-meteo_df = st.session_state.get("df_2021", pd.DataFrame())
+
+#meteo_df = st.session_state.get("df_2021", pd.DataFrame())
 selected_area = st.session_state.get("selected_area", None)
+selected_coords = st.session_state.get("selected_coords", None)
 
 if selected_area:
     st.write(f"Working with Price Area: {selected_area}")
     selected_area = selected_area.replace(" ", "")
     # Use it for filtering, analysis, etc.
-if selected_area is None:
+if selected_area is None or selected_coords is None:
     st.warning("No price area selected. Please select one from the Map page.")
     if st.button("🗺️ Go to Map Page", type="primary"):
         st.switch_page("pages/1_Map_And_Selector.py")
@@ -53,17 +55,24 @@ energy_df["startTime"] = pd.to_datetime(energy_df["startTime"], utc=True)
 min_date = energy_df["startTime"].min().date()
 max_date = energy_df["startTime"].max().date()
 
+one_year_later = min_date + pd.Timedelta(days=365)
+
+default_end = min(one_year_later, max_date)
+
 start_date, end_date = st.slider(
     "Select training period",
     min_value=min_date,
     max_value=max_date,
-    value=(min_date, max_date),
+    value=(min_date, default_end),
     format="YYYY-MM-DD"
 )
 
 forecast_horizon = st.number_input(
     "Forecast horizon (hours)", min_value=24, max_value=720, value=168, step=24
 )
+
+lat, lon = selected_coords
+meteo_df = ut.get_weather_data(lat, lon, start_date, end_date)
 
 # SARIMAX parameters
 st.markdown("### Model hyperparameters (SARIMAX)")

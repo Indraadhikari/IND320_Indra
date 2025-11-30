@@ -58,6 +58,7 @@ col1, col2 = st.columns(2)
 # --------- PIE CHART ---------
 with col1:
     st.header(f"Pie Chart for Price Area {selected_area}")
+    st.write("\n")
 
     pie_df = (
         df[df["priceArea"] == selected_area]
@@ -72,6 +73,8 @@ with col1:
         names="productionGroup",
         title=f"Energy Production by Group in {selected_area} ({selected_year})"
     )
+    
+    pie_fig.update_layout(margin=dict(t=200, b=0, l=0, r=0))  # Adjust 't' (top margin) to your desired value (e.g., 80)
 
     st.plotly_chart(pie_fig, use_container_width=True)
 
