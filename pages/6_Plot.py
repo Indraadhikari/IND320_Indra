@@ -2,6 +2,10 @@ import pandas as pd
 import datetime as dt
 import streamlit as st
 import plotly.express as px
+import utils as ut 
+
+ut.apply_styles()
+ut.show_sidebar()
 
 st.title("Interactive line plot for different weathers variable over time.")
 
@@ -9,10 +13,12 @@ city = st.session_state.get("city", "Oslo")
 
 df_2021 = st.session_state.get("df_2021")
 
-# df_2021 = pd.read_csv("open-meteo-subset.csv", encoding='UTF-8')
-if df_2021 is None:
-    st.warning("Please go back to page 'Table' and load data first.")
+if city is None or df_2021 is None:
+    st.warning("No price area selected. Please select one from the Map page.")
+    if st.button("🗺️ Go to Map Page", type="primary"):
+        st.switch_page("pages/1_Map_And_Selector.py")
     st.stop()
+
 
 st.caption(f"Info: These dataset cover open-meteo weathers data for {city} for year 2021.")
 

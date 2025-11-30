@@ -1,6 +1,10 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import utils as ut
+
+ut.apply_styles()
+ut.show_sidebar()
 
 st.set_page_config(page_title="Meteorology ↔ Energy Correlation", page_icon='🆚', layout="wide")
 st.title("Meteorology and Energy Production  - Sliding Window Correlation")

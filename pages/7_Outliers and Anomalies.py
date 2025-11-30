@@ -4,16 +4,36 @@ import pandas as pd
 from sklearn.neighbors import LocalOutlierFactor
 import numpy as np
 from scipy.fftpack import dct, idct
+import utils as ut 
+
+ut.apply_styles()
+ut.show_sidebar()
 
 st.title("Outlier/SPC and Anomaly/LOF analysis")
 
-df_2021 = st.session_state.get("df_2021")
+df_2021 = st.session_state.get("df_2021", None)
 
-city = st.session_state.get("city", "Oslo")
+selected_area = st.session_state.get('selected_area', None)
 
-if df_2021 is None:
-    st.warning("Please go back to page 'Table' and load data first.")
+if selected_area is None or df_2021 is None:
+    st.warning("No price area selected. Please select one from the Map page.")
+    if st.button("🗺️ Go to Map Page", type="primary"):
+        st.switch_page("pages/1_Map_And_Selector.py")
     st.stop()
+
+area_mapping = {
+    "NO1": {"city": "Oslo"},
+    "NO2": {"city": "Kristiansand"},
+    "NO3": {"city": "Trondheim"},
+    "NO4": {"city": "Tromsø"},
+    "NO5": {"city": "Bergen"},
+}
+
+area_key = selected_area.replace(" ", "")
+if area_key in area_mapping:
+    city = area_mapping[area_key]["city"]
+else:
+    city = "Unknown"
 
 st.caption(f"Info: These dataset cover open-meteo weathers data for {city} for year 2021.")
 

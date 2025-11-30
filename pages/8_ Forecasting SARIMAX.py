@@ -8,6 +8,10 @@ import plotly.graph_objects as go
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 import warnings
 warnings.filterwarnings("ignore")
+import utils as ut 
+
+ut.apply_styles()
+ut.show_sidebar()
 
 # --------------------------------------------------------------------
 # Page Config
@@ -22,10 +26,14 @@ energy_df = st.session_state.get("df", pd.DataFrame())
 meteo_df = st.session_state.get("df_2021", pd.DataFrame())
 selected_area = st.session_state.get("selected_area", None)
 
-selected_area = selected_area.replace(" ", "")
-
-if energy_df.empty:
-    st.warning("⚠️ Please load the energy production dataset first.")
+if selected_area:
+    st.write(f"Working with Price Area: {selected_area}")
+    selected_area = selected_area.replace(" ", "")
+    # Use it for filtering, analysis, etc.
+if selected_area is None:
+    st.warning("No price area selected. Please select one from the Map page.")
+    if st.button("🗺️ Go to Map Page", type="primary"):
+        st.switch_page("pages/1_Map_And_Selector.py")
     st.stop()
 
 # Filter for selected area if available

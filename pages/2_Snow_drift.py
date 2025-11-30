@@ -3,6 +3,10 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import requests
+import utils as ut
+
+ut.apply_styles()
+ut.show_sidebar()
 
 st.set_page_config(page_title="Snow Drift Analysis", page_icon="❄️", layout="wide")
 

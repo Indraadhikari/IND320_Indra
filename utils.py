@@ -1,0 +1,146 @@
+# components.py
+import streamlit as st
+from pymongo import MongoClient
+import pandas as pd
+import requests
+
+
+# CSS Helper
+@st.cache_data(show_spinner=False)
+def apply_styles():
+
+    css = f"""
+    <style>
+    /* Hide Streamlit default multi-page navigation */
+    div[data-testid="stSidebarNav"] {{
+        display: none !important;
+    }}
+    """
+    st.markdown(css, unsafe_allow_html=True)
+    
+@st.cache_data(show_spinner=False)
+def show_sidebar():
+    st.sidebar.title("Navigation")
+    # --- Overview ---
+    with st.sidebar.expander("📘 Overview", expanded=True): # Expanded by default for main navigation
+        st.page_link("app.py", label="🏠 Home")
+        st.page_link("pages/1_Map_And_Selector.py", label="🗺️ Map Overview")
+        st.page_link("pages/4_Energy Production.py", label="⚡ Energy Production")
+
+
+    # --- Explorative Analysis ---
+    with st.sidebar.expander("🔍 Explorative Analysis", expanded=True):
+        st.page_link("pages/5_Table.py", label="📊 Tables")
+        st.page_link("pages/6_Plot.py", label="📈 Plots")
+        st.page_link("pages/5_STL and Spectrogram.py", label="🔦 STL & Spectrogram")
+
+    # --- Spatial / Climate Analysis ---
+    with st.sidebar.expander("🧭 Spatial & Climate Analysis", expanded=True):
+        st.page_link("pages/2_Snow_drift.py", label="❄️ Snow Drift Analysis")
+        # st.page_link("pages/7_Wind_Rose.py", label="🌬️ Wind Rose") # optional if you have this
+        st.page_link("pages/3_Sliding_Window_Correlation.py", label="🛰️ Sliding Correlation")
+
+    # --- Data Quality & Anomalies ---
+    with st.sidebar.expander("🚨 Data Quality & Anomalies", expanded=True):
+        st.page_link("pages/7_Outliers and Anomalies.py", label="⚠️ Outliers & Anomalies")
+
+    # --- Forecasting ---
+    with st.sidebar.expander("🔮 Forecasting", expanded=True):
+        st.page_link("pages/8_ Forecasting SARIMAX.py", label="📉 SARIMAX Forecasting")
+
+    st.sidebar.write("---")
+    st.sidebar.caption("Use the sidebar to navigate pages.")
+    # ----------------------------------------------------------------
+
+
+# -----------------------------
+# MongoDB URI Helper
+# -----------------------------
+def get_creadential(host):
+    if host == "github":
+        # --- Connect to MongoDB ---
+        USR = st.secrets["mongo"]["username"]
+        PWD = st.secrets["mongo"]["password"]
+    else:
+        c_file = 'No_sync/MongoDB.txt'
+        USR, PWD = open(c_file).read().splitlines()
+    return USR, PWD
+
+@st.cache_resource
+def get_mongo_uri():
+    # --- Connect to MongoDB ---
+    host = "github"
+    #host = "local"
+    USR, PWD = get_creadential(host)
+    uri = f"mongodb+srv://{USR}:{PWD}@cluster0.wmoqhtp.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    return uri
+
+# -----------------------------
+# MongoDB Client
+# -----------------------------
+@st.cache_resource
+def get_mongo_client(uri):
+    return MongoClient(uri)
+
+# -----------------------------
+# Load Data from MongoDB
+# -----------------------------
+@st.cache_data(show_spinner=False)
+def load_data_from_mongo(db_name="indra", collection_name="production_per_group"):
+    uri = get_mongo_uri()
+    client = get_mongo_client(uri)
+    db = client[db_name]
+    data = list(db[collection_name].find())
+    df = pd.DataFrame(data)
+    if "startTime" in df.columns:
+        df["startTime"] = pd.to_datetime(df["startTime"], utc=True)
+    if "quantityKwh" in df.columns:
+        df["quantityKwh"] = pd.to_numeric(df["quantityKwh"], errors="coerce")
+    return df
+# -----------------------------
+# Load CSV
+# -----------------------------
+@st.cache_data(show_spinner=False)
+def load_data_from_csv(file_path="No_sync/P_Energy.csv"):
+    df = pd.read_csv(file_path)
+    if "startTime" in df.columns:
+        df["startTime"] = pd.to_datetime(df["startTime"], utc=True)
+    if "quantityKwh" in df.columns:
+        df["quantityKwh"] = pd.to_numeric(df["quantityKwh"], errors="coerce")
+    return df
+
+@st.cache_data(show_spinner=False)
+def get_weather_data(lat, lon, year):
+    try:
+        url = "https://archive-api.open-meteo.com/v1/archive"
+        params = {
+            "latitude": lat,
+            "longitude": lon,
+            "start_date": f"{year}-01-01",
+            "end_date": f"{year}-12-31",
+            "hourly": [
+                "temperature_2m",
+                "precipitation",
+                "windspeed_10m",
+                "wind_gusts_10m",
+                "wind_direction_10m"
+            ],
+            "timezone": "Europe/Oslo"
+        }
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        df = pd.DataFrame(data["hourly"])
+        df = df.rename(columns={
+            'temperature_2m': 'temperature_2m (°C)',
+            'windspeed_10m': 'wind_speed_10m (m/s)',
+            'precipitation': 'precipitation (mm)',
+            'wind_gusts_10m': 'wind_gusts_10m (m/s)',
+            'wind_direction_10m': 'wind_direction_10m (°)'
+        })
+        df["time"] = pd.to_datetime(df["time"], format="%Y-%m-%dT%H:%M")
+        return df
+    
+    except Exception as e:
+        st.error(f"Error fetching weather data: {e}")
+        return None

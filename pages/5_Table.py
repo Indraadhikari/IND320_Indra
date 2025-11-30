@@ -1,24 +1,23 @@
 import pandas as pd
 import streamlit as st
 import requests
+import utils as ut 
+
+ut.apply_styles()
+ut.show_sidebar()
 
 st.title('Tabular data from the open-meteo API.')
 
-# --------------------------------------------------------------------
-# Get selected area and coordinates from session_state
-# --------------------------------------------------------------------
 selected_area = st.session_state.get("selected_area", None)
 selected_coords = st.session_state.get("selected_coords", None)  # expects tuple/list: (lat, lon)
-production_df = st.session_state.get("df", pd.DataFrame())
 
 # Check if selections exist
 if selected_area is None or selected_coords is None:
-    st.warning("No price area or coordinates selected. Please select one from the Map page.")
+    st.warning("No price area selected. Please select one from the Map page.")
+    if st.button("🗺️ Go to Map Page", type="primary"):
+        st.switch_page("pages/1_Map_And_Selector.py")
     st.stop()
 
-if production_df.empty:
-    st.warning("No production dataset loaded.")
-    st.stop()
 
 lat, lon = selected_coords
 
@@ -41,49 +40,11 @@ else:
 
 st.caption(f"Info: These dataset cover open-meteo weather data for {city} for year 2021.")
 
-# --------------------------------------------------------------------
-# Fetch weather data function
-# --------------------------------------------------------------------
-def get_weather_data(lat, lon, year):
-    url = "https://archive-api.open-meteo.com/v1/archive"
-    params = {
-        "latitude": lat,
-        "longitude": lon,
-        "start_date": f"{year}-01-01",
-        "end_date": f"{year}-12-31",
-        "hourly": [
-            "temperature_2m",
-            "precipitation",
-            "windspeed_10m",
-            "wind_gusts_10m",
-            "wind_direction_10m"
-        ],
-        "timezone": "Europe/Oslo"
-    }
-    response = requests.get(url, params=params)
-    response.raise_for_status()
-    data = response.json()
-    df = pd.DataFrame(data["hourly"])
-    df = df.rename(columns={
-        'temperature_2m': 'temperature_2m (°C)',
-        'windspeed_10m': 'wind_speed_10m (m/s)',
-        'precipitation': 'precipitation (mm)',
-        'wind_gusts_10m': 'wind_gusts_10m (m/s)',
-        'wind_direction_10m': 'wind_direction_10m (°)'
-    })
-    df["time"] = pd.to_datetime(df["time"], format="%Y-%m-%dT%H:%M")
-    return df
-
-# --------------------------------------------------------------------
-# Load weather data for 2021
-# --------------------------------------------------------------------
-df_2021 = get_weather_data(lat, lon, 2021)
+df_2021 = ut.get_weather_data(lat, lon, 2021)
 st.write("1. Overview of the dataset.")
 st.write(df_2021)
 
-# --------------------------------------------------------------------
-# Display summary with first month line chart preview
-# --------------------------------------------------------------------
+
 st.write("2. Weather Data Summary - First Month with Line Chart Previews")
 first_month = df_2021[df_2021["time"].dt.month == df_2021["time"].dt.month.min()]
 
