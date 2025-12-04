@@ -15,6 +15,8 @@ st.title("STL analysis and Spectrogram")
 # Try to get the selected area and year
 area = st.session_state.get('selected_area', None)
 production_df = st.session_state.get("df", [])
+selected_data_type = st.session_state.get("selected_data_type", None)
+
 
 if area:
     st.write(f"Working with Price Area: {area}")
@@ -25,7 +27,13 @@ if area is None or len(production_df) == 0:
         st.switch_page("pages/1_Map_And_Selector.py")
     st.stop()
 
-st.caption("Info: The analysing dataset is the energy production data.")
+if selected_data_type != "production":
+    st.warning("This page only works for production data now. Please select production data")
+    if st.button("🗺️ Go to Map Page", type="primary"):
+        st.switch_page("pages/1_Map_And_Selector.py")
+    st.stop()
+
+st.caption(f"Info: The analysing dataset is the energy {selected_data_type} data.")
 area = area.replace(" ", "")
 
 
@@ -55,7 +63,7 @@ with st.spinner("Implementing STL and Spectrogram... ⏳"):
     ):
         sub = production_df[
             (production_df['priceArea'] == area) &
-            (production_df['productionGroup'].str.lower() == group.lower())
+            (production_df['energyGroup'].str.lower() == group.lower())
         ].copy()
 
         if sub.empty:
@@ -112,7 +120,7 @@ with st.spinner("Implementing STL and Spectrogram... ⏳"):
     ):
         sub = production_df[
             (production_df['priceArea'] == area) &
-            (production_df['productionGroup'].str.lower() == group.lower())
+            (production_df['energyGroup'].str.lower() == group.lower())
         ].copy()
 
         if sub.empty:

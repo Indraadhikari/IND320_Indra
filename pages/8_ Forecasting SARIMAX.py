@@ -27,6 +27,7 @@ energy_df = st.session_state.get("df", pd.DataFrame())
 #meteo_df = st.session_state.get("df_2021", pd.DataFrame())
 selected_area = st.session_state.get("selected_area", None)
 selected_coords = st.session_state.get("selected_coords", None)
+selected_data_type = st.session_state.get("selected_data_type", None)
 
 if selected_area:
     st.write(f"Working with Price Area: {selected_area}")
@@ -48,7 +49,7 @@ if selected_area is not None:
 # --------------------------------------------------------------------
 # User Controls
 # --------------------------------------------------------------------
-group = st.selectbox("Select energy group", energy_df["productionGroup"].unique().tolist())
+group = st.selectbox("Select energy group", energy_df["energyGroup"].unique().tolist())
 value_col = st.selectbox("Select quantity to forecast", ["quantityKwh"])
 
 energy_df["startTime"] = pd.to_datetime(energy_df["startTime"], utc=True)
@@ -96,7 +97,7 @@ else:
 # --------------------------------------------------------------------
 # Data Preparation
 # --------------------------------------------------------------------
-df = energy_df[energy_df["productionGroup"]==group].copy()
+df = energy_df[energy_df["energyGroup"]==group].copy()
 df["startTime"] = pd.to_datetime(df["startTime"], utc=True)
 df = df[(df['startTime'] >= pd.Timestamp(start_date).tz_localize('UTC')) &
         (df['startTime'] <= pd.Timestamp(end_date).tz_localize('UTC'))]

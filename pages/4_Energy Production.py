@@ -6,12 +6,13 @@ import utils as ut
 ut.apply_styles()
 ut.show_sidebar()
 
-st.title("Energy Production Dashboard (MongoDB)")
 
 selected_area = st.session_state.get('selected_area', None)
+selected_data_type = st.session_state.get("selected_data_type", None)
+st.title(f"Energy {selected_data_type} Dashboard (MongoDB)")
 
 if selected_area:
-    st.write(f"Working with Price Area: {selected_area}")
+    st.caption(f"Working with Price Area: {selected_area} for {selected_data_type} data")
     selected_area = selected_area.replace(" ", "")
 
 if selected_area is None:
@@ -21,15 +22,10 @@ if selected_area is None:
     st.stop()
 
 
-@st.cache_data(show_spinner=False)
+#@st.cache_data(show_spinner=False)
 def get_df():
     df = st.session_state.get("df", [])
-
-    if len(df) == 0:
-        df = ut.load_data_from_csv(file_path="No_sync/P_Energy.csv")
-        st.session_state["df"] = df
     return df
-
 
 # ---------------- LOAD DATA ----------------
 with st.spinner("Fetching data..."):
@@ -62,7 +58,7 @@ with col1:
 
     pie_df = (
         df[df["priceArea"] == selected_area]
-        .groupby("productionGroup")["quantityKwh"]
+        .groupby("energyGroup")["quantityKwh"]
         .sum()
         .reset_index()
     )
@@ -70,8 +66,8 @@ with col1:
     pie_fig = px.pie(
         pie_df,
         values="quantityKwh",
-        names="productionGroup",
-        title=f"Energy Production by Group in {selected_area} ({selected_year})"
+        names="energyGroup",
+        title=f"Energy {selected_data_type} by Group in {selected_area} ({selected_year})"
     )
     
     pie_fig.update_layout(margin=dict(t=200, b=0, l=0, r=0))  # Adjust 't' (top margin) to your desired value (e.g., 80)
@@ -81,14 +77,14 @@ with col1:
 
 # --------- LINE CHART ---------
 with col2:
-    st.header("Select Production Groups and Month for Line Chart")
+    st.header(f"Select {selected_data_type} Groups and Month for Line Chart")
 
-    # Unique production groups
-    all_groups = sorted(df["productionGroup"].unique())
+    # Unique {selected_data_type} groups
+    all_groups = sorted(df["energyGroup"].unique())
 
     # Pills for groups
     selected_groups = st.pills(
-        "Select Production Groups:",
+        f"Select {selected_data_type} Groups:",
         options=all_groups,
         selection_mode="multi",
         default=all_groups
@@ -103,7 +99,7 @@ with col2:
 
     # Filter for line chart
     line_df = df[
-        (df["productionGroup"].isin(selected_groups)) &
+        (df["energyGroup"].isin(selected_groups)) &
         (df["startTime"].dt.month == month) &
         (df["priceArea"] == selected_area)
     ]
@@ -111,7 +107,7 @@ with col2:
     if not line_df.empty:
         pivot_df = line_df.pivot_table(
             index="startTime",
-            columns="productionGroup",
+            columns="energyGroup",
             values="quantityKwh",
             aggfunc="sum",
             fill_value=0
@@ -119,7 +115,7 @@ with col2:
 
         line_long = pivot_df.melt(
             id_vars="startTime",
-            var_name="productionGroup",
+            var_name="energyGroup",
             value_name="quantityKwh"
         )
 
@@ -127,8 +123,8 @@ with col2:
             line_long,
             x="startTime",
             y="quantityKwh",
-            color="productionGroup",
-            title=f"Energy Production in {selected_area} for {pd.Timestamp(selected_year, month, 1).strftime('%B')} {selected_year}"
+            color="energyGroup",
+            title=f"Energy {selected_data_type} in {selected_area} for {pd.Timestamp(selected_year, month, 1).strftime('%B')} {selected_year}"
         )
 
         st.plotly_chart(line_fig, use_container_width=True)
@@ -139,8 +135,8 @@ with col2:
 # --------- EXPANDER ---------
 with st.expander("Data Source & Notes"):
     st.write("""
-    The data shown here is sourced from the MongoDB collection `production_per_group` in database `indra`. 
+    The data shown here is sourced from the MongoDB collection `{selected_data_type}_per_group` in database `indra`. 
     The original source of the data is Elhub API ('https://api.elhub.no/') - once extracted from the API, data is stored in MongoDB.
-    It contains hourly energy production by production group (hydro, wind, thermal, solar, and others) and price area. 
-    The pie chart shows total production for the selected price area, while the line chart shows time series data for the selected month and production groups.
+    It contains hourly energy {selected_data_type} by {selected_data_type} group (hydro, wind, thermal, solar, and others) and price area. 
+    The pie chart shows total {selected_data_type} for the selected price area, while the line chart shows time series data for the selected month and {selected_data_type} groups.
     """)

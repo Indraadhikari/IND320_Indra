@@ -7,13 +7,15 @@ import datetime as dt
 ut.apply_styles()
 ut.show_sidebar()
 
-st.set_page_config(page_title="Meteorology ↔ Energy Correlation", page_icon='🆚', layout="wide")
-st.title("Meteorology and Energy Production  - Sliding Window Correlation")
 
 # Load data from session_state
 #meteo_df = st.session_state.get("df_2021", pd.DataFrame())
 energy_df = st.session_state.get("df", pd.DataFrame())
 selected_coords = st.session_state.get("selected_coords", None)
+selected_data_type = st.session_state.get("selected_data_type", None)
+
+st.set_page_config(page_title="Meteorology ↔ Energy Correlation", page_icon='🆚', layout="wide")
+st.title(f"Meteorology and Energy {selected_data_type}  - Sliding Window Correlation")
 
 
 if energy_df.empty or selected_coords is None:
@@ -29,7 +31,7 @@ lat, lon = selected_coords
 start_date = pd.to_datetime(energy_df["startTime"].min(), utc=True).date()
 end_date = pd.to_datetime(energy_df["startTime"].max(), utc=True).date()
 
-st.info(f"The available production data ranges from **{start_date.strftime('%Y-%m-%d')}** to **{end_date.strftime('%Y-%m-%d')}**.")
+st.info(f"The available {selected_data_type} data ranges from **{start_date.strftime('%Y-%m-%d')}** to **{end_date.strftime('%Y-%m-%d')}**.")
 
 with st.spinner("Fetching data..."):
     meteo_df = []
@@ -49,7 +51,7 @@ def sliding_window_corr(x: pd.Series, y: pd.Series, window: int = 24, lag: int =
 meteo_cols = [c for c in meteo_df.columns if c not in ["time", "date", "datetime"]]
 meteo_var = st.selectbox("Select meteorological variable", meteo_cols, index=0)
 
-energy_groups = energy_df["productionGroup"].unique().tolist()
+energy_groups = energy_df["energyGroup"].unique().tolist()
 energy_group = st.selectbox("Select energy production/consumption group", energy_groups, index=0)
 
 lag = st.slider("Lag (hours)", -72, 72, 0, step=3)
@@ -59,7 +61,7 @@ window = st.slider("Window length (hours)", 12, 240, 72, step=12)
 
 # ---- ENERGY ----
 ts_energy = (
-    energy_df[energy_df["productionGroup"] == energy_group]
+    energy_df[energy_df["energyGroup"] == energy_group]
     .groupby("startTime", as_index=True)["quantityKwh"]
     .mean()                                   # aggregate -> unique timestamp
     .sort_index()

@@ -22,30 +22,30 @@ def apply_styles():
 def show_sidebar():
     st.sidebar.title("Navigation")
     # --- Overview ---
-    with st.sidebar.expander("📘 Overview", expanded=True): # Expanded by default for main navigation
+    with st.sidebar.expander("Overview", expanded=True): # Expanded by default for main navigation
         st.page_link("app.py", label="🏠 Home")
         st.page_link("pages/1_Map_And_Selector.py", label="🗺️ Map Overview")
         st.page_link("pages/4_Energy Production.py", label="⚡ Energy Production")
 
 
     # --- Explorative Analysis ---
-    with st.sidebar.expander("🔍 Explorative Analysis", expanded=True):
+    with st.sidebar.expander("Explorative Analysis", expanded=True):
         st.page_link("pages/5_Table.py", label="📊 Tables")
         st.page_link("pages/6_Plot.py", label="📈 Plots")
         st.page_link("pages/5_STL and Spectrogram.py", label="🔦 STL & Spectrogram")
 
     # --- Spatial / Climate Analysis ---
-    with st.sidebar.expander("🧭 Spatial & Climate Analysis", expanded=True):
+    with st.sidebar.expander("Energy & Climate Analysis", expanded=True):
         st.page_link("pages/2_Snow_drift.py", label="❄️ Snow Drift Analysis")
         # st.page_link("pages/7_Wind_Rose.py", label="🌬️ Wind Rose") # optional if you have this
         st.page_link("pages/3_Sliding_Window_Correlation.py", label="🛰️ Sliding Correlation")
 
     # --- Data Quality & Anomalies ---
-    with st.sidebar.expander("🚨 Data Quality & Anomalies", expanded=True):
+    with st.sidebar.expander("Data Quality & Anomalies", expanded=True):
         st.page_link("pages/7_Outliers and Anomalies.py", label="⚠️ Outliers & Anomalies")
 
     # --- Forecasting ---
-    with st.sidebar.expander("🔮 Forecasting", expanded=True):
+    with st.sidebar.expander("Forecasting", expanded=True):
         st.page_link("pages/8_ Forecasting SARIMAX.py", label="📉 SARIMAX Forecasting")
 
     st.sidebar.write("---")

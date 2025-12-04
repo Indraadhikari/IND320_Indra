@@ -11,3 +11,6 @@ No_sync/
 __pycache__
 # Ignore streamlit secretes
 .streamlit/secrets.toml
+
+# Don't sync folder output
+output/

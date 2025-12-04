@@ -6,8 +6,26 @@ import plotly.graph_objects as go
 import json
 import utils as ut
 
+# --- Apply custom styles & sidebar ---
 ut.apply_styles()
 ut.show_sidebar()
+
+# -------------------------------
+# --- Normalize columns function
+# -------------------------------
+def normalize_columns(df):
+    """Normalize columns for production and consumption datasets."""
+    df.columns = [c.lower() for c in df.columns]
+
+    rename_map = {
+        "productiongroup": "energyGroup",
+        "consumptiongroup": "energyGroup",
+        "starttime": "startTime",
+        "pricearea": "priceArea",
+        "quantitykwh": "quantityKwh"
+    }
+    df = df.rename(columns=rename_map)
+    return df
 
 # --- load GeoJSON once, cache to speed up ---
 @st.cache_data(show_spinner=False)
@@ -16,7 +34,6 @@ def load_geojson():
     gdf = gpd.read_file(url)
     return gdf
 
-
 # --- UPDATED FUNCTION ---
 def mean_values_by_area(production_df, group, start_date, end_date):
     """Return mean quantityKwh per priceArea for chosen group and interval (start_date to end_date)."""
@@ -24,26 +41,28 @@ def mean_values_by_area(production_df, group, start_date, end_date):
     end_date = pd.Timestamp(end_date).tz_localize('UTC')
     # Ensure start_date is before end_date
     if start_date > end_date:
-        start_date, end_date = end_date, start_date # Swap them if necessary
+        start_date, end_date = end_date, start_date
     
     df = production_df[
-        (production_df['productionGroup'].str.lower() == group.lower()) &
+        (production_df['energyGroup'].str.lower() == group.lower()) &
         (production_df['startTime'].between(pd.to_datetime(start_date), pd.to_datetime(end_date)))
     ]
     return df.groupby('priceArea')['quantityKwh'].mean().reset_index()
-
 
 def get_area_centroid(geojson_gdf, area_name):
     """Calculate the centroid of a selected price area."""
     selected = geojson_gdf[geojson_gdf['ElSpotOmr'] == area_name]
     if not selected.empty:
-        # Get centroid in lat/lon
         centroid = selected.geometry.centroid.iloc[0]
         return (centroid.y, centroid.x)  # (lat, lon)
     return None
 
-
-st.set_page_config(page_title="Price Areas Map", layout="wide")
+# --- Set page configuration ---
+st.set_page_config(
+    page_title="Price Areas Map",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 st.title("Price Areas NO1 - NO5")
 
@@ -53,33 +72,72 @@ if 'selected_area' not in st.session_state:
 if 'selected_coords' not in st.session_state:
     st.session_state.selected_coords = None
 
-with st.spinner("Fetching data..."):
-# --- load your production data ---
-    production_df = st.session_state.get("df", None)
-    if production_df is None:
-    
-        production_df = ut.load_data_from_mongo(db_name="indra", collection_name="production_per_group")
-        #production_df = ut.load_data_from_csv(file_path="No_sync/P_Energy.csv")
-        st.session_state["df"] = production_df
+# -------------------------------
+# --- SELECTOR: Production / Consumption
+# -------------------------------
+st.subheader("Data Source")
 
-    # --- DATA RANGE LIMITS ---
-    min_date = production_df['startTime'].min().date()
-    max_date = production_df['startTime'].max().date()
+# Initialize session state for selections
+if "selected_data_type" not in st.session_state:
+    st.session_state.selected_data_type = "production"
+if "selected_group" not in st.session_state:
+    st.session_state.selected_group = None
+
+
+def init_and_get_data():
+    """Initialize datasets and return selected dataframe in a memory-efficient way."""
+
+    # Radio button to select dataset
+    mode = st.radio(
+        "Choose dataset:",
+        ["Production", "Consumption"],
+        index=0 if st.session_state.get("selected_data_type", "production") == "production" else 1,
+        horizontal=True
+    )
+    
+    # Store selection type in session for other pages
+    st.session_state.selected_data_type = mode.lower()
+
+    # Load the dataset using cache
+    with st.spinner("Fetching data..."):
+        try:
+            if mode == "Production":
+                df  = normalize_columns(ut.load_data_from_mongo(db_name="indra", collection_name="production_per_group"))
+                #df = normalize_columns(ut.load_data_from_csv("No_sync/P_Energy.csv"))
+            else:
+                #df = normalize_columns(ut.load_data_from_csv("No_sync/C_Energy.csv"))
+                df = normalize_columns(ut.load_data_from_mongo(db_name="indra", collection_name="consumption_per_group"))
+        except Exception as e:
+            st.error("Error while try to connect MongoDB.")
+
+    # Store active df in session so other pages can use it
+    st.session_state["df"] = df
+
+    return df, st.session_state.selected_data_type
+
+
+with st.spinner("Fetching data..."):
+    production_df, mode = init_and_get_data()
+
+# --- DATA RANGE LIMITS ---
+production_df['startTime'] = pd.to_datetime(production_df['startTime'], utc=True)
+min_date = production_df['startTime'].min().date()
+max_date = production_df['startTime'].max().date()
 
 # --- Display Data Range Info ---
-st.info(f"The available production data ranges from **{min_date.strftime('%Y-%m-%d')}** to **{max_date.strftime('%Y-%m-%d')}**.")
+st.info(f"The available {mode.lower()} data ranges from **{min_date.strftime('%Y-%m-%d')}** to **{max_date.strftime('%Y-%m-%d')}**.")
 
-# --- user choices ---
+# --- Dynamic energy group selection ---
+group_options = sorted(production_df['energyGroup'].dropna().unique())
 col1, col2, col3 = st.columns([1, 1, 1])
 
 with col1:
-    group = st.selectbox("Select energy group", ["hydro", "wind", "solar", "thermal", "other"])
+    group = st.selectbox("Select energy group", group_options)
 
-# --- UPDATED DATE INPUTS ---
 with col2:
     start_date = st.date_input(
         "Start Date (inclusive)",
-        value=max_date - pd.Timedelta(days=30), # Default to 30 days back
+        value=max_date - pd.Timedelta(days=30),
         min_value=min_date,
         max_value=max_date
     )
@@ -92,44 +150,40 @@ with col3:
         max_value=max_date
     )
 
-with st.spinner("Fetching data..."):
+# --- Load GeoJSON ---
+with st.spinner("Fetching geodata..."):
     geojson = load_geojson()
 
-    # --- compute mean values for chosen interval ---
-    # NOTE: Pass start_date and end_date directly
+    # --- Compute mean values for chosen interval ---
     mean_df = mean_values_by_area(production_df, group, start_date, end_date)
     mean_df['priceArea'] = mean_df['priceArea'].str.replace('NO', 'NO ', regex=False)
 
-    # --- build choropleth map (Map building code remains the same) ---
+    # --- Build choropleth map ---
     fig = px.choropleth_mapbox(
-        mean_df,    
+        mean_df,
         geojson=geojson,
         color="quantityKwh",
-        color_continuous_scale="Viridis",
+        color_continuous_scale="Viridis",  # 🔹 ORIGINAL color scale restored
         featureidkey="properties.ElSpotOmr",
         locations="priceArea",
         center={"lat": 65, "lon": 13},
         mapbox_style="carto-positron",
-        opacity=0.5,
+        opacity=0.6,
         zoom=3,
         height=600,
         hover_name="priceArea",
     )
 
-# ... (Rest of the map drawing code for outline, marker, layout, and click handler) ...
-# --- Add highlighted outline for selected area ---
+# --- Highlight selected area ---
 if st.session_state.selected_area:
     selected_gdf = geojson[geojson['ElSpotOmr'] == st.session_state.selected_area]
-    
     if not selected_gdf.empty:
         selected_geojson = json.loads(selected_gdf.to_json())
-        
         for feature in selected_geojson['features']:
             if feature['geometry']['type'] == 'Polygon':
                 coords = feature['geometry']['coordinates'][0]
                 lons = [coord[0] for coord in coords]
                 lats = [coord[1] for coord in coords]
-                
                 fig.add_trace(go.Scattermapbox(
                     lon=lons,
                     lat=lats,
@@ -144,12 +198,11 @@ if st.session_state.selected_area:
                     coords = polygon[0]
                     lons = [coord[0] for coord in coords]
                     lats = [coord[1] for coord in coords]
-                    
                     fig.add_trace(go.Scattermapbox(
                         lon=lons,
                         lat=lats,
                         mode='lines',
-                        line=dict(width=3, color='red'),
+                        line=dict(width=2, color='red'),
                         name=f'Selected: {st.session_state.selected_area}',
                         showlegend=False,
                         hoverinfo='skip'
@@ -162,13 +215,14 @@ if st.session_state.selected_coords:
         lon=[lon],
         lat=[lat],
         mode='markers',
-        marker=dict(size=15, color='red', symbol='star'),
+        marker=dict(size=15, color='#1E90FF', symbol='star'),
         name='Selected Location',
         showlegend=False,
         hovertext=f'Lat: {lat:.4f}°, Lon: {lon:.4f}°',
         hoverinfo='text'
     ))
 
+# --- Update map layout ---
 fig.update_layout(
     margin={"r": 0, "t": 0, "l": 0, "b": 0},
     coloraxis_colorbar=dict(title="Mean kWh"),
@@ -181,7 +235,7 @@ fig.update_layout(
     )
 )
 
-# --- Display map and capture click events ---
+# --- Display map ---
 selected = st.plotly_chart(
     fig,
     use_container_width=True,
@@ -194,20 +248,13 @@ if selected and selected.selection and selected.selection.get("points"):
     points = selected.selection["points"]
     if points:
         point = points[0]
-        
-        # Get the clicked price area
         clicked_area = point.get("location")
-        
         if clicked_area:
-            # Area was clicked - update both area and coordinates
             if clicked_area != st.session_state.selected_area:
                 st.session_state.selected_area = clicked_area
-                
-                # Calculate centroid of the selected area
                 centroid = get_area_centroid(geojson, clicked_area)
                 if centroid:
                     st.session_state.selected_coords = centroid
-                
                 st.rerun()
 
 if st.button("Clear Selection", use_container_width=True, type="secondary"):
@@ -216,20 +263,16 @@ if st.button("Clear Selection", use_container_width=True, type="secondary"):
     st.rerun()
 
 # --- Display selection info ---
-
-# Calculate number of days for display in the metric
-days_diff = (end_date - start_date).days + 1 
-
+days_diff = (end_date - start_date).days + 1
 col1, col2, col3 = st.columns([30, 30, 50])
 
 with col1:
     if st.session_state.selected_area:
         st.success(f"**Selected Price Area:** {st.session_state.selected_area}")
-        
         area_data = mean_df[mean_df['priceArea'] == st.session_state.selected_area]
         if not area_data.empty:
             st.metric(
-                label=f"Mean Production ({group})",
+                label=f"Mean {mode} ({group})",
                 value=f"{area_data['quantityKwh'].values[0]:,.0f} kWh",
                 help=f"Average over {days_diff} days"
             )
@@ -249,5 +292,5 @@ with col3:
     st.metric("Time Period", f"{start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
     st.metric("Energy Group", group.title())
 
-#For weathers data
-selected_coords = st.session_state.get("selected_coords", None) 
+# --- For weather data ---
+selected_coords = st.session_state.get("selected_coords", None)
