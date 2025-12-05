@@ -123,8 +123,6 @@ if len(production_df) == 0:
 
 production_df['quantityKwh'] = pd.to_numeric(production_df['quantityKwh'], errors="coerce")
 
-st.write(production_df)
-
 # --- DATA RANGE LIMITS ---
 production_df['startTime'] = pd.to_datetime(production_df['startTime'], utc=True)
 min_date = production_df['startTime'].min().date()
