@@ -100,15 +100,13 @@ def init_and_get_data():
 
     # Load the dataset using cache
     with st.spinner("Fetching data..."):
-        try:
-            if mode == "Production":
-                df  = normalize_columns(ut.load_data_from_mongo(db_name="indra", collection_name="production_per_group"))
+        df = []
+        if mode == "Production":
+            df  = normalize_columns(ut.load_data_from_mongo(db_name="indra", collection_name="production_per_group"))
                 #df = normalize_columns(ut.load_data_from_csv("No_sync/P_Energy.csv"))
-            else:
+        else:
                 #df = normalize_columns(ut.load_data_from_csv("No_sync/C_Energy.csv"))
-                df = normalize_columns(ut.load_data_from_mongo(db_name="indra", collection_name="consumption_per_group"))
-        except Exception as e:
-            st.error("Error while try to connect MongoDB.")
+            df = normalize_columns(ut.load_data_from_mongo(db_name="indra", collection_name="consumption_per_group"))
 
     # Store active df in session so other pages can use it
     st.session_state["df"] = df
@@ -118,6 +116,14 @@ def init_and_get_data():
 
 with st.spinner("Fetching data..."):
     production_df, mode = init_and_get_data()
+
+if len(production_df) == 0:
+    st.warning("There is not any data to process, Please be sure about data source.")
+    st.stop()
+
+production_df['quantityKwh'] = pd.to_numeric(production_df['quantityKwh'], errors="coerce")
+
+st.write(production_df)
 
 # --- DATA RANGE LIMITS ---
 production_df['startTime'] = pd.to_datetime(production_df['startTime'], utc=True)
