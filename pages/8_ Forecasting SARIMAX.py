@@ -171,7 +171,7 @@ if st.button("Run Forecast", type="primary"):
     ))
     fig.update_layout(title=f"SARIMAX Forecast for {group} ({value_col})", template="plotly_white",
                       xaxis_title="Time", yaxis_title="Energy Production/Consumption (kWh)", height=600)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
     # --- Metrics
     st.subheader("Model Summary (shortened)")

@@ -11,22 +11,6 @@ ut.apply_styles()
 ut.show_sidebar()
 
 # -------------------------------
-# --- Normalize columns function
-# -------------------------------
-def normalize_columns(df):
-    """Normalize columns for production and consumption datasets."""
-    df.columns = [c.lower() for c in df.columns]
-
-    rename_map = {
-        "productiongroup": "energyGroup",
-        "consumptiongroup": "energyGroup",
-        "starttime": "startTime",
-        "pricearea": "priceArea",
-        "quantitykwh": "quantityKwh"
-    }
-    df = df.rename(columns=rename_map)
-    return df
-
 # --- load GeoJSON once, cache to speed up ---
 @st.cache_data(show_spinner=False)
 def load_geojson():
@@ -84,44 +68,35 @@ if "selected_group" not in st.session_state:
     st.session_state.selected_group = None
 
 
-def init_and_get_data():
-    """Initialize datasets and return selected dataframe in a memory-efficient way."""
-
-    # Radio button to select dataset
-    mode = st.radio(
-        "Choose dataset:",
-        ["Production", "Consumption"],
-        index=0 if st.session_state.get("selected_data_type", "production") == "production" else 1,
-        horizontal=True
-    )
-    
-    # Store selection type in session for other pages
-    st.session_state.selected_data_type = mode.lower()
-
-    # Load the dataset using cache
+@st.cache_data(show_spinner=False)
+def init_and_get_data(dataset_type):
     with st.spinner("Fetching data..."):
         df = []
-        if mode == "Production":
-            df  = normalize_columns(ut.load_data_from_mongo(db_name="indra", collection_name="production_per_group"))
+        if dataset_type == "production":
+            df  = ut.normalize_columns(ut.load_data_from_mongo(db_name="indra", collection_name="production_per_group"))
                 #df = normalize_columns(ut.load_data_from_csv("No_sync/P_Energy.csv"))
         else:
                 #df = normalize_columns(ut.load_data_from_csv("No_sync/C_Energy.csv"))
-            df = normalize_columns(ut.load_data_from_mongo(db_name="indra", collection_name="consumption_per_group"))
+            df = ut.normalize_columns(ut.load_data_from_mongo(db_name="indra", collection_name="consumption_per_group"))
 
-    # Store active df in session so other pages can use it
-    st.session_state["df"] = df
 
-    return df, st.session_state.selected_data_type
+    return df
 
+mode = st.radio("Choose dataset:", ["Production", "Consumption"], horizontal=True)
+
+dataset_type = mode.lower()
 
 with st.spinner("Fetching data..."):
-    production_df, mode = init_and_get_data()
+    production_df = init_and_get_data(dataset_type)
+
+st.session_state.selected_dataset = dataset_type
 
 if len(production_df) == 0:
-    st.warning("There is not any data to process, Please be sure about data source.")
+    st.warning("There is not any data to process, Please check your data source.")
     st.stop()
 
 production_df['quantityKwh'] = pd.to_numeric(production_df['quantityKwh'], errors="coerce")
+
 
 # --- DATA RANGE LIMITS ---
 production_df['startTime'] = pd.to_datetime(production_df['startTime'], utc=True)
@@ -242,7 +217,7 @@ fig.update_layout(
 # --- Display map ---
 selected = st.plotly_chart(
     fig,
-    use_container_width=True,
+    width='stretch',
     on_select="rerun",
     selection_mode="points"
 )
@@ -261,7 +236,7 @@ if selected and selected.selection and selected.selection.get("points"):
                     st.session_state.selected_coords = centroid
                 st.rerun()
 
-if st.button("Clear Selection", use_container_width=True, type="secondary"):
+if st.button("Clear Selection", width='stretch', type="secondary"):
     st.session_state.selected_area = None
     st.session_state.selected_coords = None
     st.rerun()

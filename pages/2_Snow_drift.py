@@ -312,7 +312,7 @@ if 'snow_drift_df' in st.session_state:
     # Wind Rose
     st.subheader("Wind Rose - Directional Snow Transport")
     fig_rose = plot_wind_rose(avg_sectors, overall_avg)
-    st.plotly_chart(fig_rose, use_container_width=True)
+    st.plotly_chart(fig_rose, width='stretch')
     
     st.divider()
     
@@ -328,7 +328,7 @@ if 'snow_drift_df' in st.session_state:
         yearly_display[display_cols].style.format({
             'Qt (tonnes/m)': '{:.1f}'
         }),
-        use_container_width=True,
+        width='stretch',
         height=400
     )
     
@@ -356,7 +356,7 @@ if 'snow_drift_df' in st.session_state:
         height=400
     )
     
-    st.plotly_chart(fig_bar, use_container_width=True)
+    st.plotly_chart(fig_bar, width='stretch')
     
 
 # Help

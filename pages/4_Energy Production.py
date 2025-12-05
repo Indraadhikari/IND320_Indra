@@ -72,7 +72,7 @@ with col1:
     
     pie_fig.update_layout(margin=dict(t=200, b=0, l=0, r=0))  # Adjust 't' (top margin) to your desired value (e.g., 80)
 
-    st.plotly_chart(pie_fig, use_container_width=True)
+    st.plotly_chart(pie_fig, width='stretch')
 
 
 # --------- LINE CHART ---------
@@ -127,7 +127,7 @@ with col2:
             title=f"Energy {selected_data_type} in {selected_area} for {pd.Timestamp(selected_year, month, 1).strftime('%B')} {selected_year}"
         )
 
-        st.plotly_chart(line_fig, use_container_width=True)
+        st.plotly_chart(line_fig, width='stretch')
     else:
         st.info("No data available for the selected combination.")
 

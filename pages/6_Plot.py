@@ -72,7 +72,7 @@ if selected_column == 'All Columns':
     # Interactive multi-line plot
     fig2 = px.line(df_long, x="time", y="value", color="variable", title="Weather Data over Time", width=1000,height=500)
 
-    st.plotly_chart(fig2, use_container_width=True)
+    st.plotly_chart(fig2, width='stretch')
 # ploting line charts as a columns selected from dropbox option 
 else:
     fig = px.line(filtered_df, x='time', y=selected_column, 
@@ -81,4 +81,4 @@ else:
                   width=1000, height=500)
     fig.update_layout(yaxis_title=selected_column.title(), xaxis_title="Month")
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')

@@ -183,7 +183,7 @@ with tab1:
             trend=365,
             robust=True
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
 with tab2:
     st.subheader("Spectrogram")
@@ -195,4 +195,4 @@ with tab2:
             window_length=256,
             overlap=128
         )
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, width='stretch')

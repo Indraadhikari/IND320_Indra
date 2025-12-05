@@ -97,6 +97,22 @@ def get_mongo_uri():
 def get_mongo_client(uri):
     return MongoClient(uri)
 
+# --- Normalize columns function
+# -------------------------------
+def normalize_columns(df):
+    """Normalize columns for production and consumption datasets."""
+    df.columns = [c.lower() for c in df.columns]
+
+    rename_map = {
+        "productiongroup": "energyGroup",
+        "consumptiongroup": "energyGroup",
+        "starttime": "startTime",
+        "pricearea": "priceArea",
+        "quantitykwh": "quantityKwh"
+    }
+    df = df.rename(columns=rename_map)
+    return df
+
 # -----------------------------
 # Load Data from MongoDB
 # -----------------------------
@@ -112,6 +128,7 @@ def load_data_from_mongo(db_name="indra", collection_name="production_per_group"
     if "quantityKwh" in df.columns:
         df["quantityKwh"] = pd.to_numeric(df["quantityKwh"], errors="coerce")
     return df
+
 # -----------------------------
 # Load CSV
 # -----------------------------

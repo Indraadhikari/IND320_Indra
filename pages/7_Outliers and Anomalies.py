@@ -210,7 +210,7 @@ with tab1:
     k = st.slider("MAD multiplier (k)", 1, 5, 3)
 
     outliers, stats, fig = analyze_temperature_outliers(df_2021, freq_cutoff=cutoff, k=k)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     st.write("Summary:", stats)
 
 with tab2:
@@ -218,5 +218,5 @@ with tab2:
     prop = st.slider("Proportion of anomalies", 0.001, 0.05, 0.01)
 
     anomalies, stats, fig = analyze_precipitation_anomalies(df_2021, proportion=prop)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     st.write("Summary:", stats)
